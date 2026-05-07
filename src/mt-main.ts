@@ -59,15 +59,23 @@ export default class MiniToolbar extends Plugin {
     const textRanges = data.text ?? [];
     const bgRanges = data.bg ?? [];
     const underlineRanges: Range[] = data.underline ?? [];
-    if (!textRanges.length && !bgRanges.length && !underlineRanges.length)
+    const commentRanges: Range[] = data.comments ?? [];
+    if (
+      !textRanges.length &&
+      !bgRanges.length &&
+      !underlineRanges.length &&
+      !commentRanges.length
+    )
       return;
 
     const sortedText = sortRanges(textRanges);
     const sortedBg = sortRanges(bgRanges);
     const sortedUnderline = sortRanges(underlineRanges);
+    const sortedComments = sortRanges(commentRanges);
     const textCursor = new RangeCursor(sortedText);
     const bgCursor = new RangeCursor(sortedBg);
     const underlineCursor = new RangeCursor(sortedUnderline);
+    const commentCursor = new RangeCursor(sortedComments);
 
     const doc = containerEl.ownerDocument || document;
     const walker = doc.createTreeWalker(
@@ -113,6 +121,7 @@ export default class MiniToolbar extends Plugin {
       textCursor.advanceTo(start);
       bgCursor.advanceTo(start);
       underlineCursor.advanceTo(start);
+      commentCursor.advanceTo(start);
 
       const boundaries = new Set<number>();
       boundaries.add(start);
@@ -120,6 +129,7 @@ export default class MiniToolbar extends Plugin {
       textCursor.addBoundaries(boundaries, start, end);
       bgCursor.addBoundaries(boundaries, start, end);
       underlineCursor.addBoundaries(boundaries, start, end);
+      commentCursor.addBoundaries(boundaries, start, end);
 
       if (boundaries.size === 2) continue;
 
@@ -139,11 +149,13 @@ export default class MiniToolbar extends Plugin {
         const textColor = textCursor.rangeAt(segFrom)?.color ?? null;
         const bgColor = bgCursor.rangeAt(segFrom)?.color ?? null;
         const underline = !!underlineCursor.rangeAt(segFrom);
+        const commented = !!commentCursor.rangeAt(segFrom);
 
-        if (!textColor && !bgColor && !underline) {
+        if (!textColor && !bgColor && !underline && !commented) {
           fragments.push(doc.createTextNode(slice));
         } else {
           const span = doc.createElement("span");
+          if (commented) span.classList.add("mini-toolbar-v2-comment-mark");
           if (textColor) span.style.color = textColor;
           if (bgColor) span.style.backgroundColor = bgColor;
           if (underline) span.style.textDecoration = "underline";

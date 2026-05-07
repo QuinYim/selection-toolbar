@@ -2,7 +2,18 @@ import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { App, editorInfoField } from "obsidian";
 
-import { setBgColorEffect, setTextColorEffect, setUnderlineEffect } from "./colorRanges";
+import {
+  addCommentEffect,
+  revealCommentById,
+  setBgColorEffect,
+  setTextColorEffect,
+  setUnderlineEffect,
+} from "./colorRanges";
+
+export interface SelectionOffsetRange {
+  from: number;
+  to: number;
+}
 
 export const cutText = (state: EditorState) => {
   const editor = getEditorFromState(state);
@@ -16,6 +27,14 @@ export const copyText = (state: EditorState) => {
   const editor = getEditorFromState(state);
   if (!editor) return;
   window.navigator.clipboard.writeText(editor?.getSelection());
+};
+
+export const pasteText = async (state: EditorState) => {
+  const editor = getEditorFromState(state);
+  if (!editor) return;
+  const text = await window.navigator.clipboard.readText();
+  if (!text) return;
+  editor.replaceSelection(text, "mini-toolbar-v2-paste");
 };
 
 export const boldText = (app: App) => {
@@ -39,7 +58,242 @@ export const getEditorFromState = (state: EditorState) => {
   return editor;
 };
 
-const getViewFromState = (state: EditorState): EditorView | null => {
+export const getSelectionOffsetRange = (
+  state: EditorState,
+): SelectionOffsetRange | null => {
+  const editor = getEditorFromState(state);
+  if (!editor) return null;
+  const fromPos = editor.getCursor("from");
+  const toPos = editor.getCursor("to");
+  const from = editor.posToOffset(fromPos);
+  const to = editor.posToOffset(toPos);
+  if (from >= to) return null;
+  return { from, to };
+};
+
+const setSelectionByOffset = (
+  state: EditorState,
+  from: number,
+  to = from,
+): void => {
+  const editor = getEditorFromState(state);
+  if (!editor) return;
+  editor.setSelection(editor.offsetToPos(from), editor.offsetToPos(to));
+};
+
+const getSelectionTextAndOffsets = (state: EditorState) => {
+  const editor = getEditorFromState(state);
+  if (!editor) return null;
+  const fromPos = editor.getCursor("from");
+  const toPos = editor.getCursor("to");
+  const from = editor.posToOffset(fromPos);
+  const to = editor.posToOffset(toPos);
+  const text = editor.getRange(fromPos, toPos);
+  if (from >= to || !text) return null;
+  return { editor, from, to, fromPos, toPos, text };
+};
+
+const toggleSelectionWrapper = (
+  state: EditorState,
+  prefix: string,
+  suffix = prefix,
+) => {
+  const selection = getSelectionTextAndOffsets(state);
+  if (!selection) return;
+
+  const { editor, from, to, fromPos, toPos, text } = selection;
+  const doc = editor.getValue();
+  const wrapped =
+    from >= prefix.length &&
+    doc.slice(from - prefix.length, from) === prefix &&
+    doc.slice(to, to + suffix.length) === suffix;
+
+  if (wrapped) {
+    editor.replaceRange(
+      "",
+      editor.offsetToPos(to),
+      editor.offsetToPos(to + suffix.length),
+      "mini-toolbar-v2",
+    );
+    editor.replaceRange(
+      "",
+      editor.offsetToPos(from - prefix.length),
+      editor.offsetToPos(from),
+      "mini-toolbar-v2",
+    );
+    setSelectionByOffset(state, from - prefix.length, to - prefix.length);
+    return;
+  }
+
+  editor.replaceRange(
+    `${prefix}${text}${suffix}`,
+    fromPos,
+    toPos,
+    "mini-toolbar-v2",
+  );
+  setSelectionByOffset(state, from + prefix.length, to + prefix.length);
+};
+
+export const insertLink = (state: EditorState) => {
+  const selection = getSelectionTextAndOffsets(state);
+  if (!selection) return;
+
+  const { editor, from, fromPos, toPos, text } = selection;
+  const existingLink = text.match(/^\[([^\]]*)\]\(([^)]*)\)$/);
+  if (existingLink) {
+    const replacement = existingLink[1] || existingLink[2];
+    editor.replaceRange(replacement, fromPos, toPos, "mini-toolbar-v2");
+    setSelectionByOffset(state, from, from + replacement.length);
+    return;
+  }
+
+  const replacement = `[${text}]()`;
+  editor.replaceRange(replacement, fromPos, toPos, "mini-toolbar-v2");
+  const urlOffset = from + text.length + 3;
+  setSelectionByOffset(state, urlOffset);
+};
+
+export const toggleInlineCode = (state: EditorState) => {
+  toggleSelectionWrapper(state, "`");
+};
+
+export const toggleInlineMath = (state: EditorState) => {
+  const selection = getSelectionTextAndOffsets(state);
+  if (!selection) return;
+  if (selection.text.includes("\n")) {
+    toggleSelectionWrapper(state, "$$\n", "\n$$");
+    return;
+  }
+  toggleSelectionWrapper(state, "$");
+};
+
+export type TextLineStyle = "text" | "heading1" | "heading2" | "heading3";
+
+const styleLine = (line: string, style: TextLineStyle): string => {
+  const indent = line.match(/^\s*/)?.[0] ?? "";
+  const body = line
+    .slice(indent.length)
+    .replace(/^(#{1,6}\s+|>\s+|[-*+]\s+|\d+\.\s+)/, "");
+  if (!body.trim()) return line;
+
+  const prefix =
+    style === "heading1"
+      ? "# "
+      : style === "heading2"
+      ? "## "
+      : style === "heading3"
+      ? "### "
+      : "";
+  return `${indent}${prefix}${body}`;
+};
+
+export const applyTextLineStyle = (
+  state: EditorState,
+  style: TextLineStyle,
+) => {
+  const editor = getEditorFromState(state);
+  if (!editor) return;
+
+  const from = editor.getCursor("from");
+  const to = editor.getCursor("to");
+  const startLine = Math.min(from.line, to.line);
+  const endLine = Math.max(from.line, to.line);
+
+  for (let lineNo = endLine; lineNo >= startLine; lineNo--) {
+    const line = editor.getLine(lineNo);
+    const next = styleLine(line, style);
+    if (next === line) continue;
+    editor.replaceRange(
+      next,
+      { line: lineNo, ch: 0 },
+      { line: lineNo, ch: line.length },
+      "mini-toolbar-v2",
+    );
+  }
+};
+
+const toBulletedLine = (line: string, remove: boolean): string => {
+  const indent = line.match(/^\s*/)?.[0] ?? "";
+  const body = line.slice(indent.length);
+  if (!body.trim()) return line;
+
+  if (remove) {
+    return `${indent}${body.replace(/^[-*+]\s+/, "")}`;
+  }
+
+  return `${indent}- ${body.replace(/^([-*+]\s+|\d+[.)]\s+)/, "")}`;
+};
+
+export const toggleBulletedList = (state: EditorState) => {
+  const editor = getEditorFromState(state);
+  if (!editor) return;
+
+  const from = editor.getCursor("from");
+  const to = editor.getCursor("to");
+  const startLine = Math.min(from.line, to.line);
+  const endLine = Math.max(from.line, to.line);
+  const lines: string[] = [];
+
+  for (let lineNo = startLine; lineNo <= endLine; lineNo++) {
+    lines.push(editor.getLine(lineNo));
+  }
+
+  const contentLines = lines.filter((line) => line.trim());
+  const shouldRemove =
+    contentLines.length > 0 &&
+    contentLines.every((line) => /^\s*[-*+]\s+/.test(line));
+
+  for (let lineNo = endLine; lineNo >= startLine; lineNo--) {
+    const line = editor.getLine(lineNo);
+    const next = toBulletedLine(line, shouldRemove);
+    if (next === line) continue;
+    editor.replaceRange(
+      next,
+      { line: lineNo, ch: 0 },
+      { line: lineNo, ch: line.length },
+      "mini-toolbar-v2-list",
+    );
+  }
+};
+
+export const insertComment = (
+  state: EditorState,
+  rawComment: string,
+  range?: SelectionOffsetRange | null,
+  commentId?: string | null,
+) => {
+  const comment = rawComment.trim().replace(/%%/g, "% %");
+  if (!comment) return;
+
+  const target = range ?? getSelectionOffsetRange(state);
+  if (!target) return;
+
+  const view = getViewFromState(state);
+  if (!view) return;
+
+  const id =
+    commentId ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+  view.dispatch({
+    effects: addCommentEffect.of({
+      from: target.from,
+      to: target.to,
+      text: comment,
+      id,
+      author: "Quin Yim",
+    }),
+    selection: { anchor: target.from, head: target.to },
+  });
+
+  requestAnimationFrame(() => {
+    if (!revealCommentById(view, id)) {
+      requestAnimationFrame(() => revealCommentById(view, id));
+    }
+  });
+};
+
+export const getViewFromState = (state: EditorState): EditorView | null => {
   try {
     // editorInfoField gives us the MarkdownView; from there we can grab the
     // underlying CM6 EditorView via the internal `cm`/`cmEditor` property.

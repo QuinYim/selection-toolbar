@@ -1,29 +1,90 @@
-.cm-mini-toolbar-v2 {
-  width: auto;
+.cm-obsidian-toolbar {
+  width: min(286px, calc(100vw - 16px));
   height: auto;
-  padding: 3px;
-  display: flex;
+  padding: 0;
+  display: grid;
   user-select: none;
-  border-radius: 6px;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
+  overflow: visible;
+  border-radius: 14px;
   z-index: var(--layer-menu);
   border: 1px solid var(--background-modifier-border);
   background-color: var(--background-primary);
-  //max-width: 200px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.11);
 
   & button {
-    margin: 2px;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
+    margin: 0;
     border: none;
     display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    padding: 5px;
+    padding: 0;
     box-shadow: none;
     position: relative;
-    border-radius: 3px;
-    font-size: var(--editor-font-size);
+    border-radius: 7px;
+    color: var(--text-normal);
+    font-size: 15px;
+    background-color: transparent;
+  }
+
+  & button:hover {
+    background-color: var(--background-modifier-hover);
+  }
+
+  & button.is-active {
+    background-color: var(--background-modifier-hover);
+    box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover);
+  }
+
+  & button svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.1;
+  }
+
+  .mini-toolbar-v2-row {
+    display: grid;
+    align-items: center;
+  }
+
+  .mini-toolbar-v2-row-primary,
+  .mini-toolbar-v2-row-secondary {
+    grid-template-columns: repeat(6, 1fr);
+    justify-items: center;
+    column-gap: 8px;
+    padding: 8px 14px 2px;
+  }
+
+  .mini-toolbar-v2-row-secondary {
+    padding-top: 2px;
+    padding-bottom: 8px;
+  }
+
+  .mini-toolbar-v2-comment-button {
+    justify-content: center;
+  }
+
+  .mini-toolbar-v2-text-icon {
+    line-height: 1;
+    font-size: 18px;
+    font-weight: 500;
+  }
+
+  .mini-toolbar-v2-color-trigger {
     background-color: var(--background-primary-alt);
+    box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+  }
+
+  .mini-toolbar-v2-color-trigger .mini-toolbar-v2-text-icon {
+    font-weight: 700;
+  }
+
+  .mini-toolbar-v2-button-label {
+    line-height: 1;
   }
 
   .mini-toolbar-v2-icon-with-text {
@@ -46,74 +107,292 @@
 
 /* Theme-aware highlight variables */
 .theme-light {
-  --mtv2-bg-gray: #EAEAEA;
-  --mtv2-bg-brown: #EEE0DA;
-  --mtv2-bg-orange: #FAEBDD;
-  --mtv2-bg-yellow: #FBF3DB;
-  --mtv2-bg-green: #DDEDEA;
-  --mtv2-bg-blue: #DDEBF1;
-  --mtv2-bg-purple: #EAE4F2;
-  --mtv2-bg-pink: #F4DFEB;
-  --mtv2-bg-red: #FBE4E4;
+  --mtv2-bg-gray: #eaeaea;
+  --mtv2-bg-brown: #eee0da;
+  --mtv2-bg-orange: #faebdd;
+  --mtv2-bg-yellow: #fbf3db;
+  --mtv2-bg-green: #ddedea;
+  --mtv2-bg-blue: #ddebf1;
+  --mtv2-bg-purple: #eae4f2;
+  --mtv2-bg-pink: #f4dfeb;
+  --mtv2-bg-red: #fbe4e4;
 }
 .theme-dark {
   /* darker, Notion-like tints */
-  --mtv2-bg-gray: #2F2F2F;
-  --mtv2-bg-brown: #3A2E29;
-  --mtv2-bg-orange: #4A3A2A;
-  --mtv2-bg-yellow: #4A4526;
-  --mtv2-bg-green: #2A3F39;
+  --mtv2-bg-gray: #2f2f2f;
+  --mtv2-bg-brown: #3a2e29;
+  --mtv2-bg-orange: #4a3a2a;
+  --mtv2-bg-yellow: #4a4526;
+  --mtv2-bg-green: #2a3f39;
   --mtv2-bg-blue: #253847;
-  --mtv2-bg-purple: #372F4A;
-  --mtv2-bg-pink: #4A2B3A;
-  --mtv2-bg-red: #4A2E2E;
+  --mtv2-bg-purple: #372f4a;
+  --mtv2-bg-pink: #4a2b3a;
+  --mtv2-bg-red: #4a2e2e;
 }
 
-/* Notion-like color grid menu */
-.mini-toolbar-v2-color-menu.menu {
-  width: auto;
-  padding: 6px 8px;
+/* Notion-like color picker */
+.mini-toolbar-v2-color-popover {
+  position: fixed;
+  width: 278px;
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background-color: var(--background-primary);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+  z-index: var(--layer-popover, var(--layer-menu));
 }
-/* Header label */
-.mini-toolbar-v2-color-menu .mini-toolbar-v2-color-header {
-  font-size: 12px;
+
+.mini-toolbar-v2-color-popover .mini-toolbar-v2-color-section-title {
   color: var(--text-muted);
-  margin: 6px 8px 2px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
 }
-/* Make the list a 5-column grid like Notion (two rows for 10 colors).
-   Prefer targeting the actual items container (.menu-group), but keep
-   the custom class for robustness. */
-.mini-toolbar-v2-color-menu .menu-group,
-.mini-toolbar-v2-color-menu .mini-toolbar-v2-color-grid {
+
+.mini-toolbar-v2-color-popover .mini-toolbar-v2-color-grid {
   display: grid;
-  grid-template-columns: repeat(5, 28px);
-  gap: 8px;
-  padding: 6px 8px 10px 8px;
+  grid-template-columns: repeat(5, 36px);
+  gap: 10px 12px;
 }
-.mini-toolbar-v2-color-menu .menu-group .menu-item,
-.mini-toolbar-v2-color-menu .mini-toolbar-v2-color-grid .menu-item {
-  width: 28px !important;
-  height: 28px !important;
-  padding: 0 !important;
-  margin: 0 !important;
+
+.mini-toolbar-v2-color-popover .mini-toolbar-v2-color-grid-recent {
+  grid-template-columns: repeat(5, 36px);
 }
-.mini-toolbar-v2-color-menu .menu-group .menu-item .menu-item-icon,
-.mini-toolbar-v2-color-menu .mini-toolbar-v2-color-grid .menu-item .menu-item-icon {
-  display: none;
-}
-.mini-toolbar-v2-color-menu .menu-group .menu-item .menu-item-title,
-.mini-toolbar-v2-color-menu .mini-toolbar-v2-color-grid .menu-item .menu-item-title {
-  width: 100%;
-  height: 100%;
+
+.mini-toolbar-v2-color-popover .mini-toolbar-v2-color-swatch {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  border-radius: 6px;
+  cursor: pointer;
+  box-sizing: border-box;
   border: 1px solid var(--background-modifier-border);
   background-color: var(--background-primary);
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--text-normal);
+  font: inherit;
+  transition: border-color 120ms ease, box-shadow 120ms ease,
+    transform 120ms ease;
 }
-.mini-toolbar-v2-color-menu .menu-group .menu-item:hover .menu-item-title,
-.mini-toolbar-v2-color-menu .mini-toolbar-v2-color-grid .menu-item:hover .menu-item-title {
+
+.mini-toolbar-v2-color-popover .mini-toolbar-v2-color-swatch:hover {
   border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--background-modifier-hover);
+  transform: translateY(-1px);
+}
+
+.mini-toolbar-v2-color-popover .mini-toolbar-v2-color-swatch.is-default {
+  border-color: var(--text-normal);
+  border-width: 2px;
+}
+
+.mini-toolbar-v2-color-popover
+  .mini-toolbar-v2-color-swatch.is-background:not(.is-default) {
+  background-clip: padding-box;
+}
+
+.mini-toolbar-v2-color-popover .mini-toolbar-v2-color-letter {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.theme-dark .mini-toolbar-v2-color-popover {
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.38);
+}
+
+.mini-toolbar-v2-comment-popover {
+  position: fixed;
+  width: 260px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background-color: var(--background-primary);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
+  z-index: var(--layer-popover, var(--layer-menu));
+}
+
+.mini-toolbar-v2-comment-input {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text-normal);
+  background-color: var(--background-primary);
+  font: inherit;
+}
+
+.mini-toolbar-v2-comment-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--background-modifier-hover);
+}
+
+.mini-toolbar-v2-comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.mini-toolbar-v2-comment-action {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 7px;
+  color: var(--text-normal);
+  background-color: var(--background-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mini-toolbar-v2-comment-action:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.mini-toolbar-v2-comment-action.is-primary {
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+  background-color: var(--interactive-accent);
+}
+
+.mini-toolbar-v2-comment-mark {
+  background-color: rgba(255, 213, 79, 0.32);
+  border-bottom: 2px solid rgba(216, 164, 0, 0.78);
+  text-decoration: underline;
+  text-decoration-color: rgba(216, 164, 0, 0.78);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.mini-toolbar-v2-comment-anchor {
+  position: static;
+  display: inline-block;
+  width: 0;
+  height: 0;
+  vertical-align: top;
+  pointer-events: none;
+}
+
+.mini-toolbar-v2-comment-card {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: min(300px, calc(100vw - 24px));
+  min-height: 76px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background-color: var(--background-primary);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
+  color: var(--text-normal);
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: normal;
+  z-index: var(--layer-popover, var(--layer-menu));
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.mini-toolbar-v2-comment-card.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.mini-toolbar-v2-comment-card-header {
+  display: grid;
+  grid-template-columns: 24px auto 1fr 22px;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.mini-toolbar-v2-comment-avatar {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-on-accent);
+  background-color: var(--interactive-accent);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mini-toolbar-v2-comment-author {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-toolbar-v2-comment-time {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.mini-toolbar-v2-comment-delete {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.mini-toolbar-v2-comment-delete:hover {
+  color: var(--text-normal);
+  background-color: var(--background-modifier-hover);
+}
+
+.mini-toolbar-v2-comment-body {
+  display: block;
+  color: var(--text-normal);
+  overflow-wrap: anywhere;
+}
+
+.theme-dark .mini-toolbar-v2-comment-popover {
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.42);
+}
+
+.theme-dark .mini-toolbar-v2-comment-mark {
+  background-color: rgba(223, 171, 1, 0.2);
+  border-bottom-color: rgba(255, 212, 93, 0.8);
+  text-decoration-color: rgba(255, 212, 93, 0.8);
+}
+
+.theme-dark .mini-toolbar-v2-comment-card {
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4);
 }

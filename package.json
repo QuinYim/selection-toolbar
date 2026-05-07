@@ -1,6 +1,6 @@
 {
-  "name": "mini-toolbar-v2",
-  "version": "0.0.2",
+  "name": "obsidian-toolbar",
+  "version": "1.0",
   "description": "mini context toolbar in editor",
   "main": "",
   "types": "src/typings/index.d.ts",
@@ -16,7 +16,7 @@
     "release": "release-it"
   },
   "keywords": [],
-  "author": "xRyul",
+  "author": "QuinYim",
   "license": "MIT",
   "devDependencies": {
     "@aidenlx/obsidian-icon-shortcodes": "^0.5.1",

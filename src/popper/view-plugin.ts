@@ -26,6 +26,11 @@ const getRectFromXY = (x = 0, y = 0): ClientRectObject => ({
   y,
 });
 
+const clampNumber = (min: number, value: number, max: number): number => {
+  if (max < min) return min;
+  return Math.min(max, Math.max(min, value));
+};
+
 const isEmbeddedEditorView = (view: EditorView): boolean => {
   const el = view.dom as HTMLElement;
   // Known wrapper for Obsidian Live Preview table cell editors.
@@ -35,10 +40,16 @@ const isEmbeddedEditorView = (view: EditorView): boolean => {
 
 const isSelectionInsideEmbeddedChild = (view: EditorView): boolean => {
   try {
-    const sel = (view.root as Document | ShadowRoot).getSelection?.() || document.getSelection();
+    const sel =
+      (view.root as Document | ShadowRoot).getSelection?.() ||
+      document.getSelection();
     const node = sel?.anchorNode as Node | null;
     if (!node) return false;
-    const el = (node.nodeType === Node.ELEMENT_NODE ? (node as Element) : (node.parentElement)) as HTMLElement | null;
+    const el = (
+      node.nodeType === Node.ELEMENT_NODE
+        ? (node as Element)
+        : node.parentElement
+    ) as HTMLElement | null;
     if (!el) return false;
     // If selection lives inside a table widget, treat it as embedded.
     return !!el.closest(".cm-table-widget");
@@ -230,6 +241,7 @@ class ViewPluginClass implements PluginValue {
     if (this.embedded || !this.toolbar) return;
     this.virtualEl.rect = refRect;
     const { padding } = this.view.state.facet(tooltipConfig);
+    const viewportGap = typeof padding === "number" ? Math.max(8, padding) : 8;
     const { x, y } = await computePosition(this.virtualEl, this.toolbar.dom, {
       placement: this.defaultPlacement,
       middleware: [
@@ -237,15 +249,36 @@ class ViewPluginClass implements PluginValue {
         flip({ padding, boundary: this.view.scrollDOM }),
         shift({
           padding,
+          crossAxis: true,
           boundary: this.view.scrollDOM,
           editorMenu: this.editorMenu.currMenu,
         }),
       ],
     });
+    const parentRect = (
+      this.toolbar.dom.offsetParent as HTMLElement | null
+    )?.getBoundingClientRect() ?? {
+      left: 0,
+      top: 0,
+    };
+    const docEl = this.view.dom.ownerDocument.documentElement;
+    const toolbarWidth = this.toolbar.dom.offsetWidth;
+    const toolbarHeight = this.toolbar.dom.offsetHeight;
+    const minX = viewportGap - parentRect.left;
+    const maxX =
+      docEl.clientWidth - parentRect.left - toolbarWidth - viewportGap;
+    const minY = viewportGap - parentRect.top;
+    const maxY =
+      docEl.clientHeight - parentRect.top - toolbarHeight - viewportGap;
+    const adjustedX = clampNumber(minX, x, maxX);
+    const adjustedY = clampNumber(minY, y, maxY);
+
     Object.assign(this.toolbar.dom.style, {
       top: "0",
       left: "0",
-      transform: `translate(${Math.round(x)}px,${Math.round(y)}px)`,
+      transform: `translate(${Math.round(adjustedX)}px,${Math.round(
+        adjustedY,
+      )}px)`,
     });
   }
 
