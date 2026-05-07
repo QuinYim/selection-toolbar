@@ -1,4 +1,4 @@
-# selection-toolbar
+<h1 align="center">selection-toolbar</h1>
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0-6E56CF?style=for-the-badge" alt="Version 1.0.0">
