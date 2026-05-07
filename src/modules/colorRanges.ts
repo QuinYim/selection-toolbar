@@ -476,7 +476,7 @@ class CommentWidget extends WidgetType {
     const closeButtonEl = doc.createElement("button");
     closeButtonEl.className = "mini-toolbar-v2-comment-delete";
     closeButtonEl.type = "button";
-    closeButtonEl.setAttribute("aria-label", "Close comment");
+    closeButtonEl.setAttribute("aria-label", "Delete comment");
     closeButtonEl.textContent = "×";
     closeButtonEl.addEventListener("mousedown", (evt) => {
       evt.preventDefault();
@@ -485,7 +485,7 @@ class CommentWidget extends WidgetType {
     closeButtonEl.addEventListener("click", (evt) => {
       evt.preventDefault();
       evt.stopPropagation();
-      hideCommentCard(cardEl);
+      view.dispatch({ effects: removeCommentEffect.of(this.comment.id) });
     });
 
     headerEl.appendChild(avatarEl);
